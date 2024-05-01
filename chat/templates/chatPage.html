@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Chat Page</title>
+    <style>
+        body {
+            background-color: black;  
+            color: #00ff00;  
+            font-family: 'Courier New', monospace;  
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+
+        a {
+            text-decoration: none;
+        }
+
+        .typing {
+            border-right: 2px solid black; 
+            white-space: nowrap;  
+            overflow: hidden;  
+            animation: typing 2s steps(40, end), blink 0.75s step-end infinite;  
+        }
+
+        @keyframes typing {
+            from { width: 0; }  
+            to { width: 100%; }  
+        }
+
+        @keyframes blink {
+            50% { border-color: transparent; }  
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <center>
+            <h1>Welcome to Mr.Ch4t, {{ request.user }}</h1>
+        </center>
+        
+        <div class="buttons">
+            {% if request.user.is_authenticated %}
+            <form action="{% url 'logout-user' %}" method="post">
+                {% csrf_token %}
+                <button type="submit">Logout</button> 
+            </form>
+            <a href="{% url 'ProfileSettings' %}">Profile Settings</a>  
+            {% else %}
+            <a href="{% url 'login-user' %}">Login</a> 
+            {% endif %}
+        </div>
+        
+        <div class="chat__item__container" id="id_chat_item_container" style="font-size: 20px">
+            <br />
+            <input type="text" id="id_message_send_input" placeholder="Type your message here..." />
+            <button type="button" id="id_message_send_button">Send Message</button>
+            <br />
+            <br />
+        </div>
+        
+        <script>
+            const chatSocket = new WebSocket("ws://" + window.location.host + "/");
+            chatSocket.onopen = function () {
+                console.log("The connection was setup successfully!");
+            };
+            chatSocket.onclose = function () {
+                console.log("Something unexpected happened!");
+            };
+            document.querySelector("#id_message_send_input").focus();
+            document.querySelector("#id_message_send_input").onkeyup = function (e) {
+                if (e.keyCode === 13) {
+                    document.querySelector("#id_message_send_button").click();
+                }
+            };
+            document.querySelector("#id_message_send_button").onclick = function () {
+                const messageInput = document.querySelector("#id_message_send_input").value;
+                chatSocket.send(JSON.stringify({
+                    message: messageInput,
+                    username: "{{ request.user.username }}",
+                }));
+                document.querySelector("#id_message_send_input").value = "";  
+            };
+            chatSocket.onmessage = function (e) {
+                const data = JSON.parse(e.data);
+                const div = document.createElement("div");
+
+                div.className = "typing";
+                div.innerHTML = `${data.timestamp} - ${data.username}: ${data.message}`; 
+                document.querySelector("#id_chat_item_container").appendChild(div);
+            };
+        </script>
+    </div>
+</body>
+</html>
